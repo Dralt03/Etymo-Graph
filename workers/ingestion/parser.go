@@ -88,11 +88,11 @@ var knownPOS = map[string]bool{
 
 // relationTypeMap maps Wiktionary template names to our relation_type values.
 var relationTypeMap = map[string]string{
-	"bor":      "borrowed_from",
-	"borrowed": "borrowed_from",
-	"der":      "derived_from",
-	"derived":  "derived_from",
-	"inh":      "inherited_from",
+	"bor":       "borrowed_from",
+	"borrowed":  "borrowed_from",
+	"der":       "derived_from",
+	"derived":   "derived_from",
+	"inh":       "inherited_from",
 	"inherited": "inherited_from",
 }
 
@@ -220,24 +220,24 @@ func cleanDefinition(raw string) string {
 // langNameToCode maps common Wiktionary language names to ISO 639-3 codes.
 func langNameToCode(name string) string {
 	mapping := map[string]string{
-		"English":            "eng",
-		"Latin":              "lat",
-		"Ancient Greek":      "grc",
-		"French":             "fra",
-		"German":             "deu",
-		"Spanish":            "spa",
-		"Italian":            "ita",
-		"Portuguese":         "por",
-		"Dutch":              "nld",
-		"Old English":        "ang",
-		"Middle English":     "enm",
-		"Old French":         "fro",
-		"Proto-Germanic":     "gem",
+		"English":             "eng",
+		"Latin":               "lat",
+		"Ancient Greek":       "grc",
+		"French":              "fra",
+		"German":              "deu",
+		"Spanish":             "spa",
+		"Italian":             "ita",
+		"Portuguese":          "por",
+		"Dutch":               "nld",
+		"Old English":         "ang",
+		"Middle English":      "enm",
+		"Old French":          "fro",
+		"Proto-Germanic":      "gem",
 		"Proto-Indo-European": "ine",
-		"Arabic":             "ara",
-		"Hebrew":             "heb",
-		"Japanese":           "jpn",
-		"Chinese":            "zho",
+		"Arabic":              "ara",
+		"Hebrew":              "heb",
+		"Japanese":            "jpn",
+		"Chinese":             "zho",
 	}
 	if code, ok := mapping[name]; ok {
 		return code

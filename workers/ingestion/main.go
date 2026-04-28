@@ -58,10 +58,10 @@ func ingest(db *sql.DB, dumpPath string) error {
 	}
 
 	var (
-		totalPages    int
-		wordBatch     []WordRecord
-		etymBatch     []EtymologyRecord
-		start         = time.Now()
+		totalPages int
+		wordBatch  []WordRecord
+		etymBatch  []EtymologyRecord
+		start      = time.Now()
 	)
 
 	for page := range pages {
