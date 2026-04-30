@@ -9,8 +9,6 @@ import (
 
 const batchSize = 500
 
-// BulkInsertWords upserts a batch of WordRecords into the `words` table.
-// Uses ON DUPLICATE KEY UPDATE to skip duplicate (lemma, language, pos) rows.
 func BulkInsertWords(db *sql.DB, words []WordRecord) error {
 	if len(words) == 0 {
 		return nil
@@ -49,9 +47,6 @@ func BulkInsertWords(db *sql.DB, words []WordRecord) error {
 	return err
 }
 
-// BulkInsertEtymologies upserts etymology relationships.
-// Since we only have lemma strings (not IDs) at parse time, we resolve word IDs
-// via a SELECT and then insert in batch.
 func BulkInsertEtymologies(db *sql.DB, etymologies []EtymologyRecord) error {
 	if len(etymologies) == 0 {
 		return nil
@@ -76,14 +71,19 @@ func BulkInsertEtymologies(db *sql.DB, etymologies []EtymologyRecord) error {
 
 		err = db.QueryRow("SELECT id FROM words WHERE lemma = ? LIMIT 1", e.ParentLemma).Scan(&parentID)
 		if err != nil || parentID == wordID {
-			continue // self-reference guard
+			continue
+		}
+
+		langOrigin := e.LanguageOrigin
+		if len(langOrigin) > 50 {
+			langOrigin = langOrigin[:50]
 		}
 
 		_, err = db.Exec(
 			`INSERT INTO etymologies (word_id, parent_word_id, relation_type, language_origin, source, created_at, updated_at)
 			 VALUES (?, ?, ?, ?, 'wiktionary', NOW(), NOW())
 			 ON DUPLICATE KEY UPDATE relation_type=VALUES(relation_type)`,
-			wordID, parentID, e.RelationType, e.LanguageOrigin,
+			wordID, parentID, e.RelationType, langOrigin,
 		)
 		if err != nil {
 			log.Printf("Warning: etymology insert failed for %s → %s: %v", e.WordLemma, e.ParentLemma, err)
@@ -92,7 +92,6 @@ func BulkInsertEtymologies(db *sql.DB, etymologies []EtymologyRecord) error {
 	return nil
 }
 
-// InsertWordsBatched processes a slice of WordRecords in batches of batchSize.
 func InsertWordsBatched(db *sql.DB, words []WordRecord) {
 	for i := 0; i < len(words); i += batchSize {
 		end := i + batchSize

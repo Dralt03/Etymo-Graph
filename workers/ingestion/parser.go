@@ -9,8 +9,6 @@ import (
 	"strings"
 )
 
-// --- XML Streaming ---
-
 // xmlPage mirrors the Wiktionary XML structure for streaming decoding.
 type xmlPage struct {
 	Title string `xml:"title"`
@@ -18,9 +16,6 @@ type xmlPage struct {
 	Text  string `xml:"revision>text"`
 }
 
-// StreamPages opens a .xml or .xml.bz2 dump file and streams WikiPage values
-// through the returned channel. It reads one <page> at a time so it never
-// loads the whole multi-GB dump into RAM.
 func StreamPages(path string) (<-chan WikiPage, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -48,7 +43,6 @@ func StreamPages(path string) (<-chan WikiPage, error) {
 				break
 			}
 
-			// Only process <page> start elements
 			if se, ok := tok.(xml.StartElement); ok && se.Name.Local == "page" {
 				var p xmlPage
 				if err := decoder.DecodeElement(&p, &se); err != nil {
@@ -64,8 +58,6 @@ func StreamPages(path string) (<-chan WikiPage, error) {
 
 	return ch, nil
 }
-
-// --- Wikitext Parsing ---
 
 var (
 	// Match language section headers: == English ==
@@ -88,11 +80,11 @@ var knownPOS = map[string]bool{
 
 // relationTypeMap maps Wiktionary template names to our relation_type values.
 var relationTypeMap = map[string]string{
-	"bor":       "borrowed_from",
-	"borrowed":  "borrowed_from",
-	"der":       "derived_from",
-	"derived":   "derived_from",
-	"inh":       "inherited_from",
+	"bor":      "borrowed_from",
+	"borrowed": "borrowed_from",
+	"der":      "derived_from",
+	"derived":  "derived_from",
+	"inh":      "inherited_from",
 	"inherited": "inherited_from",
 }
 
@@ -120,7 +112,6 @@ func ParsePage(page WikiPage) ([]WordRecord, []EtymologyRecord) {
 		langCode := langNameToCode(langName)
 		sectionText := page.Text[start:end]
 
-		// --- Extract POS + first definition ---
 		pos := ""
 		definition := ""
 
@@ -134,7 +125,6 @@ func ParsePage(page WikiPage) ([]WordRecord, []EtymologyRecord) {
 				pos = strings.ToLower(posName)
 			}
 
-			// Find definition lines within this POS block
 			posBlockEnd := len(sectionText)
 			if j+1 < len(posMatches) {
 				posBlockEnd = posMatches[j+1][0]
@@ -146,7 +136,6 @@ func ParsePage(page WikiPage) ([]WordRecord, []EtymologyRecord) {
 			}
 		}
 
-		// Always record the word even without a POS (it's in the dump)
 		words = append(words, WordRecord{
 			Lemma:      page.Title,
 			Language:   langCode,
@@ -162,7 +151,7 @@ func ParsePage(page WikiPage) ([]WordRecord, []EtymologyRecord) {
 				continue
 			}
 			templateName := em[1]
-			// em[2] = destination language (same as langCode), em[3] = source language, em[4] = source word
+			
 			sourceLanguage := em[3]
 			sourceWord := strings.TrimSpace(em[4])
 			if sourceWord == "" {
@@ -208,7 +197,7 @@ func cleanDefinition(raw string) string {
 			}
 			return parts[0]
 		}
-		return "" // strip templates and bold/italic
+		return "" 
 	})
 	clean = strings.TrimSpace(clean)
 	if len(clean) > 500 {
@@ -220,24 +209,24 @@ func cleanDefinition(raw string) string {
 // langNameToCode maps common Wiktionary language names to ISO 639-3 codes.
 func langNameToCode(name string) string {
 	mapping := map[string]string{
-		"English":             "eng",
-		"Latin":               "lat",
-		"Ancient Greek":       "grc",
-		"French":              "fra",
-		"German":              "deu",
-		"Spanish":             "spa",
-		"Italian":             "ita",
-		"Portuguese":          "por",
-		"Dutch":               "nld",
-		"Old English":         "ang",
-		"Middle English":      "enm",
-		"Old French":          "fro",
-		"Proto-Germanic":      "gem",
+		"English":            "eng",
+		"Latin":              "lat",
+		"Ancient Greek":      "grc",
+		"French":             "fra",
+		"German":             "deu",
+		"Spanish":            "spa",
+		"Italian":            "ita",
+		"Portuguese":         "por",
+		"Dutch":              "nld",
+		"Old English":        "ang",
+		"Middle English":     "enm",
+		"Old French":         "fro",
+		"Proto-Germanic":     "gem",
 		"Proto-Indo-European": "ine",
-		"Arabic":              "ara",
-		"Hebrew":              "heb",
-		"Japanese":            "jpn",
-		"Chinese":             "zho",
+		"Arabic":             "ara",
+		"Hebrew":             "heb",
+		"Japanese":           "jpn",
+		"Chinese":            "zho",
 	}
 	if code, ok := mapping[name]; ok {
 		return code

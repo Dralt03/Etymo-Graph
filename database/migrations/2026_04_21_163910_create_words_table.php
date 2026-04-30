@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('lemma')->index();
             $table->string('language', 10)->default('eng')->index();
-            $table->string('pos', 10)->nullable()->comment('Part of speech: noun, verb, adj, adv, etc.');
+            $table->string('pos', 50)->nullable()->comment('Part of speech: noun, verb, adj, adv, etc.');
             $table->string('source')->nullable()->comment('Data source: wiktionary, babelnet');
             $table->text('definition')->nullable();
             $table->timestamps();

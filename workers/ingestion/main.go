@@ -112,7 +112,7 @@ func connectToDatabase() *sql.DB {
 	password := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_DATABASE")
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&multiStatements=true",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&multiStatements=true&charset=utf8mb4&collation=utf8mb4_unicode_ci",
 		user, password, host, port, dbName)
 
 	fmt.Printf("Connecting to MySQL at %s:%s (db: %s)\n", host, port, dbName)
