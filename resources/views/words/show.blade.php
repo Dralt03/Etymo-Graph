@@ -33,7 +33,7 @@
     </nav>
 
     <main class="flex-grow py-12 w-full">
-        <div class="max-w-3xl mx-auto px-6">
+        <div class=" max-w-5xl mx-auto px-6">
 
             <!-- Breadcrumb -->
             <div class="mb-8 text-sm text-gray-600">
@@ -123,6 +123,25 @@
                 </section>
             @endif
 
+            <!-- Interactive Graph -->
+            @if ($word->etymologies->isNotEmpty() || $word->descendants->isNotEmpty())
+            <section class="mb-10">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="section-title mb-0">Etymology Graph</p>
+                    <button id="fullscreen-btn" class="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1" title="Full Screen">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                        Full Screen
+                    </button>
+                </div>
+                <div id="graph-wrapper" class="card-border rounded-xl p-1 bg-[#0a0a0a] relative">
+                    <button id="exit-fullscreen-btn" class="hidden absolute top-4 right-4 bg-gray-800 text-white p-2 rounded-full hover:bg-gray-700 z-[9999]" title="Exit Full Screen">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                    <div id="cy" style="width: 100%; height: 400px; display: block;"></div>
+                </div>
+            </section>
+            @endif
+
             <!-- Vector drift placeholder -->
             <section class="mb-10">
                 <p class="section-title">Semantic Vector Drift</p>
@@ -141,6 +160,208 @@
             <a href="{{ route('words.search') }}" class="text-gray-600 hover:text-white text-sm transition-colors">← Search</a>
         </div>
     </footer>
+
+    @if ($word->etymologies->isNotEmpty() || $word->descendants->isNotEmpty())
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const elements = [];
+            
+            // Central Node
+            elements.push({
+                data: { 
+                    id: '{{ $word->id }}', 
+                    label: `{!! addslashes($word->lemma) !!}\n({{ $word->language }}{{ $word->pos ? ', ' . $word->pos : '' }})`, 
+                    type: 'central' 
+                }
+            });
+
+            // Origins
+            @foreach ($word->etymologies as $etymology)
+                elements.push({
+                    data: { 
+                        id: '{{ $etymology->parentWord->id }}', 
+                        label: `{!! addslashes($etymology->parentWord->lemma) !!}\n({{ $etymology->parentWord->language }}{{ $etymology->parentWord->pos ? ', ' . $etymology->parentWord->pos : '' }})`, 
+                        type: 'origin' 
+                    }
+                });
+                elements.push({
+                    data: { 
+                        id: 'e_origin_{{ $etymology->id }}', 
+                        source: '{{ $etymology->parentWord->id }}', 
+                        target: '{{ $word->id }}',
+                        label: '{{ str_replace('_', ' ', $etymology->relation_type) }}',
+                        relation: '{{ $etymology->relation_type }}'
+                    }
+                });
+            @endforeach
+
+            // Descendants
+            @foreach ($word->descendants as $descendant)
+                elements.push({
+                    data: { 
+                        id: '{{ $descendant->word->id }}', 
+                        label: `{!! addslashes($descendant->word->lemma) !!}\n({{ $descendant->word->language }}{{ $descendant->word->pos ? ', ' . $descendant->word->pos : '' }})`, 
+                        type: 'descendant' 
+                    }
+                });
+                elements.push({
+                    data: { 
+                        id: 'e_desc_{{ $descendant->id }}', 
+                        source: '{{ $word->id }}', 
+                        target: '{{ $descendant->word->id }}',
+                        label: '{{ str_replace('_', ' ', $descendant->relation_type) }}',
+                        relation: '{{ $descendant->relation_type }}'
+                    }
+                });
+            @endforeach
+
+            const cy = cytoscape({
+                container: document.getElementById('cy'),
+                elements: elements,
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'label': 'data(label)',
+                            'text-wrap': 'wrap',
+                            'color': '#fff',
+                            'font-family': 'Inter, sans-serif',
+                            'font-size': '11px',
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'background-color': '#1f2937',
+                            'border-width': 1,
+                            'border-color': '#374151',
+                            'width': 'label',
+                            'height': 'label',
+                            'padding': '12px',
+                            'shape': 'round-rectangle',
+                            'line-height': 1.4
+                        }
+                    },
+                    {
+                        selector: 'node[type="central"]',
+                        style: {
+                            'background-color': '#fff',
+                            'color': '#000',
+                            'border-color': '#fff',
+                            'font-weight': 'bold'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 1.5,
+                            'line-color': '#4b5563',
+                            'target-arrow-color': '#4b5563',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier',
+                            'label': 'data(label)',
+                            'font-size': '9px',
+                            'color': '#9ca3af',
+                            'text-rotation': 'autorotate',
+                            'text-margin-y': -8,
+                            'text-background-color': '#0a0a0a',
+                            'text-background-opacity': 0.8,
+                            'text-background-padding': '2px'
+                        }
+                    },
+                    {
+                        selector: 'edge[relation="borrowed_from"]',
+                        style: {
+                            'line-color': '#ef4444',
+                            'target-arrow-color': '#ef4444',
+                            'line-style': 'dashed',
+                            'color': '#fca5a5'
+                        }
+                    },
+                    {
+                        selector: 'edge[relation="derived_from"]',
+                        style: {
+                            'line-color': '#3b82f6',
+                            'target-arrow-color': '#3b82f6',
+                            'line-style': 'solid',
+                            'color': '#93c5fd'
+                        }
+                    },
+                    {
+                        selector: 'edge[relation="inherited_from"]',
+                        style: {
+                            'line-color': '#10b981',
+                            'target-arrow-color': '#10b981',
+                            'line-style': 'dotted',
+                            'color': '#6ee7b7'
+                        }
+                    },
+                    {
+                        selector: 'edge[relation="compound_of"]',
+                        style: {
+                            'line-color': '#a855f7',
+                            'target-arrow-color': '#a855f7',
+                            'line-style': 'solid',
+                            'color': '#d8b4fe'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'cose',
+                    idealEdgeLength: 120,
+                    nodeOverlap: 20,
+                    refresh: 20,
+                    fit: true,
+                    padding: 30,
+                    randomize: true,
+                    componentSpacing: 100,
+                    nodeRepulsion: 400000,
+                    edgeElasticity: 100,
+                    nestingFactor: 5,
+                    gravity: 80,
+                    numIter: 1000,
+                    initialTemp: 200,
+                    coolingFactor: 0.95,
+                    minTemp: 1.0
+                }
+            });
+
+            cy.on('tap', 'node', function(evt){
+                var node = evt.target;
+                window.location.href = '/word/' + node.id();
+            });
+
+            const graphWrapper = document.getElementById('graph-wrapper');
+            const fsBtn = document.getElementById('fullscreen-btn');
+            const exitFsBtn = document.getElementById('exit-fullscreen-btn');
+            const cyDiv = document.getElementById('cy');
+
+            fsBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    graphWrapper.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                    });
+                }
+            });
+            
+            exitFsBtn.addEventListener('click', () => {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+            });
+
+            document.addEventListener('fullscreenchange', () => {
+                if (document.fullscreenElement === graphWrapper) {
+                    cyDiv.style.height = '100vh';
+                    exitFsBtn.classList.remove('hidden');
+                } else {
+                    cyDiv.style.height = '400px';
+                    exitFsBtn.classList.add('hidden');
+                }
+                cy.resize();
+                cy.fit();
+            });
+        });
+    </script>
+    @endif
 
 </body>
 </html>
